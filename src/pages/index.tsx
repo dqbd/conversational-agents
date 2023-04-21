@@ -198,14 +198,31 @@ function Chat() {
           Zeptat se
         </Button>
 
-        <Button
-          type="button"
-          className="flex-shrink-0 rounded-3xl"
-          onClick={() => chat.abort()}
-          disabled={!chat.mutation.isLoading}
-        >
-          Zastavit
-        </Button>
+        {chat.mutation.isLoading ? (
+          <Button
+            type="button"
+            className="flex-shrink-0 rounded-3xl"
+            onClick={() => chat.abort()}
+            disabled={!chat.mutation.isLoading}
+          >
+            Zastavit
+          </Button>
+        ) : (
+          <>
+            {lastHistory.length > 0 && (
+              <Button
+                type="button"
+                className="flex-shrink-0 rounded-3xl"
+                onClick={() => {
+                  setLastHistory([])
+                  chat.mutation.reset()
+                }}
+              >
+                Reset
+              </Button>
+            )}
+          </>
+        )}
       </form>
 
       <AgentEditor
