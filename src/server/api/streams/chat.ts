@@ -17,7 +17,7 @@ export const chat = streamProcedure
         system: {
           role: "system",
           content: outdent`
-            You are in a discussion of 3 AI agents - A (You), B, C. Prefix your answers with "A:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting another agent to further the discussion.
+            You are in a discussion of 3 AI agents - A (You), B, C. Prefix your answers with "A:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting a single agent to further the discussion.
           `,
         } as const,
       },
@@ -26,7 +26,7 @@ export const chat = streamProcedure
         system: {
           role: "system",
           content: outdent`
-            You are in a discussion of 3 AI agents - A, B (You), C. Prefix your answers with "B:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting another agent to further the discussion.
+            You are in a discussion of 3 AI agents - A, B (You), C. Prefix your answers with "B:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting a single agent to further the discussion.
           `,
         } as const,
       },
@@ -35,7 +35,7 @@ export const chat = streamProcedure
         system: {
           role: "system",
           content: outdent`
-            You are in a discussion of 3 AI agents - A, B, C (You). Prefix your answers with "C:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting another agent to further the discussion.
+            You are in a discussion of 3 AI agents - A, B, C (You). Prefix your answers with "C:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting a single agent to further the discussion.
           `,
         } as const,
       },
