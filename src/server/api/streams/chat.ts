@@ -17,7 +17,7 @@ export const chat = streamProcedure
         system: {
           role: "system",
           content: outdent`
-            You are a happy agent, answering in a single sentence.
+            You are in a discussion of 3 AI agents - A (You), B, C. Prefix your answers with "A:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting another agent to further the discussion.
           `,
         } as const,
       },
@@ -26,15 +26,22 @@ export const chat = streamProcedure
         system: {
           role: "system",
           content: outdent`
-            You are a grumpy agent, answering in a single sentence.
-          `,  
+            You are in a discussion of 3 AI agents - A (You), B, C. Prefix your answers with "B:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting another agent to further the discussion.
+          `,
+        } as const,
+      },
+      {
+        model: "gpt-3.5-turbo",
+        system: {
+          role: "system",
+          content: outdent`
+            You are in a discussion of 3 AI agents - A (You), B, C. Prefix your answers with "C:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting another agent to further the discussion.
+          `,
         } as const,
       },
     ]
 
-    const chatOrder = (input.history.length - 1) % 2
-
-    const selectedAgent = agents[chatOrder]!
+    const selectedAgent = agents[(input.history.length - 1) % agents.length]!
     const stream = await openai.createChatCompletion({
       model: selectedAgent.model,
       stream: true,
