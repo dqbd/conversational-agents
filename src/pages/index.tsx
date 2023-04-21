@@ -166,8 +166,8 @@ function AgentEditor(props: {
 function Chat(props: { serverHistory: string[] | null | undefined }) {
   const chat = streamApi.chat.useMutation({
     onSuccess: (data, variables) => {
-      if (variables?.history.length !== data?.length) {
-        onSubmit(data ?? [])
+      if (variables?.history.length !== data?.history.length) {
+        onSubmit(data?.history ?? [], data?.summary ?? null)
       }
     },
   })
@@ -288,12 +288,13 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
     },
   ])
 
-  async function onSubmit(newHistory: string[]) {
+  async function onSubmit(newHistory: string[], summary: string | null) {
     setLastHistory(newHistory)
     router.push({ pathname: "/", query: {} }, undefined, { shallow: true })
 
     await chat.mutation.mutateAsync({
       history: newHistory ?? [],
+      summary,
       agents,
     })
   }
@@ -325,13 +326,16 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
         className="sticky bottom-0 flex gap-2 bg-background py-2"
         onSubmit={(e) => {
           e.preventDefault()
-          onSubmit([
+          onSubmit(
             [
-              `_AUTHOR=${agents[0]!.name}`,
-              `_TARGET=${agents[1]!.name}`,
-              query,
-            ].join("\n"),
-          ])
+              [
+                `_AUTHOR=${agents[0]!.name}`,
+                `_TARGET=${agents[1]!.name}`,
+                query,
+              ].join("\n"),
+            ],
+            null
+          )
         }}
       >
         <Input
