@@ -175,14 +175,6 @@ function Person(props: {
 export default function Page(props: {
   slack: RouterOutputs["slack"]["updateSlackMessages"]
 }) {
-  const users = props.slack.users.reduce<Record<string, string>>(
-    (memo, item) => {
-      memo[item.id] = item.real_name
-      return memo
-    },
-    {}
-  )
-
   const [onlySummary, setOnlySummary] = useState(false)
 
   return (
@@ -209,30 +201,7 @@ export default function Page(props: {
             <Label htmlFor="summary">Pouze v odrážkách</Label>
           </div>
 
-          <div className="flex flex-col gap-4">
-            {props.slack.channels.messages
-              .slice(0)
-              .reverse()
-              .map((msg, idx) => {
-                if (!("client_msg_id" in msg) || msg.client_msg_id == null) {
-                  return null
-                }
-
-                const user = props.slack.users.find((u) => u.id === msg.user)
-                return (
-                  <div key={msg.client_msg_id}>
-                    <Person
-                      onlySummary={onlySummary}
-                      image={user?.profile?.image_512}
-                      chatMsgId={msg.client_msg_id}
-                      content={msg.text}
-                      name={user?.real_name || msg.user}
-                      users={users}
-                    />
-                  </div>
-                )
-              })}
-          </div>
+          <div className="flex flex-col gap-4"></div>
         </div>
       </div>
     </>
