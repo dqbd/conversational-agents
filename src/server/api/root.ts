@@ -1,5 +1,4 @@
 import { createTRPCRouter } from "~/server/api/trpc"
-import { slackRouter } from "~/server/api/routers/slack"
 import { summaryRouter } from "~/server/api/routers/summary"
 
 /**
@@ -8,7 +7,6 @@ import { summaryRouter } from "~/server/api/routers/summary"
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  slack: slackRouter,
   summary: summaryRouter,
 })
 

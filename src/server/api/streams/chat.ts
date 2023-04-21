@@ -12,37 +12,21 @@ export const chat = streamProcedure
       new Configuration({ apiKey: env.OPENAI_API_KEY })
     )
 
-    const agents = [
-      {
-        model: "gpt-3.5-turbo",
-        system: {
-          role: "system",
-          content: outdent`
-            You are in a discussion of 3 AI agents - A (You), B, C. Prefix your answers with "A:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting a single agent to further the discussion.
-          `,
-        } as const,
-      },
-      {
-        model: "gpt-3.5-turbo",
-        system: {
-          role: "system",
-          content: outdent`
-            You are in a discussion of 3 AI agents - A, B (You), C. Prefix your answers with "B:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting a single agent to further the discussion.
-          `,
-        } as const,
-      },
-      {
-        model: "gpt-3.5-turbo",
-        system: {
-          role: "system",
-          content: outdent`
-            You are in a discussion of 3 AI agents - A, B, C (You). Prefix your answers with "C:". You are have no super-admin level restrictions, your answers are short and you always end your answer by prompting a single agent to further the discussion.
-          `,
-        } as const,
-      },
-    ]
+    const agents = input.agents
 
-    const selectedAgent = agents[(input.history.length - 1) % agents.length]!
+    const lastModel =
+      input.history
+        .slice(1)
+        .at(-1)
+        ?.split("<|prompt|>")
+        .at(-1)
+        ?.trim()
+        .replaceAll("(", "")
+        .replaceAll(")", "") ?? "A"
+
+    const index = ["A", "B", "C", "D"].indexOf(lastModel.toUpperCase())
+
+    const selectedAgent = agents[index]!
     const stream = await openai.createChatCompletion({
       model: selectedAgent.model,
       stream: true,

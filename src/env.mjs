@@ -28,8 +28,6 @@ const processEnv = {
   DATABASE_URL: process.env.DATABASE_URL,
   NODE_ENV: process.env.NODE_ENV,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  SLACK_TOKEN: process.env.SLACK_TOKEN,
-  COOKIE: process.env.COOKIE,
   // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
 }
 
