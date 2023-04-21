@@ -3,7 +3,7 @@ import {
   useMutation,
   type UseMutationResult,
 } from "@tanstack/react-query"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import type { StreamRouterType } from "./stream.types"
 
 import superjson from "superjson"
@@ -11,6 +11,7 @@ import superjson from "superjson"
 interface StreamMutationResult<Input, Response> {
   mutation: UseMutationResult<Response | undefined, unknown, Input, unknown>
   partial: string
+  abort: () => void
 }
 
 type StreamRouterClient<StreamRouter extends StreamRouterType> = {
@@ -33,14 +34,18 @@ function useStreamMutation<Input, Response>(
   path: string,
   options?: MutationOptions<Response | undefined, unknown, Input, unknown>
 ): StreamMutationResult<Input, Response> {
+  const ref = useRef<AbortController>(new AbortController())
   const [partial, setPartial] = useState("")
   const mutation = useMutation(async (input: Input) => {
     setPartial("")
+
+    ref.current = new AbortController()
 
     const response = await fetch(`/api/stream/${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
+      signal: ref.current.signal,
     })
 
     if (!response.ok) throw new Error(response.statusText)
@@ -70,7 +75,13 @@ function useStreamMutation<Input, Response>(
     return superjson.parse(sourceStr) as Response
   }, options)
 
-  return { mutation, partial }
+  return {
+    mutation,
+    partial,
+    abort: () => {
+      ref.current.abort()
+    },
+  }
 }
 
 type ProxyCallback = (opts: { path: string[]; args: unknown[] }) => unknown

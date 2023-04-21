@@ -7,8 +7,6 @@ import { z } from "zod"
 const server = z.object({
   DATABASE_URL: z.string().url(),
   OPENAI_API_KEY: z.string().min(1),
-  SLACK_TOKEN: z.string().min(1),
-  COOKIE: z.string().min(1),
   NODE_ENV: z.enum(["development", "test", "production"]),
 })
 
