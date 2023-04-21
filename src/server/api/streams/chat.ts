@@ -3,9 +3,10 @@ import { outdent } from "outdent"
 import { z } from "zod"
 import { env } from "~/env.mjs"
 import { streamProcedure, toAppendReadableStream } from "~/stream/stream.server"
+import { AgentSchema } from "~/utils/schema"
 
 export const chat = streamProcedure
-  .input(z.object({ history: z.array(z.string()).min(1) }))
+  .input(z.object({ history: z.array(z.string()).min(1), agents: AgentSchema }))
   .mutation(async ({ append, input }) => {
     const openai = new OpenAIApi(
       new Configuration({ apiKey: env.OPENAI_API_KEY })
