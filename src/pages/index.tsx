@@ -14,9 +14,13 @@ import { SelectItem } from "~/components/select"
 import { outdent } from "outdent"
 
 import Add from "~/assets/icons/add.svg"
+import { getPrefixedObjects } from "~/utils/msg"
+import { cn } from "~/utils/cn"
+
+const COLORS = ["bg-red-600", "bg-blue-600", "bg-green-600", "bg-yellow-600", "bg-purple-600", "bg-pink-600", "bg-indigo-600", "bg-teal-600", "bg-orange-600", "bg-gray-600", "bg-slate-600", "bg-slate-200", "bg-slate-950"]
 
 const SHOW_RAW = true
-function ChatMessage(props: { variant: "left" | "right"; message?: string }) {
+function ChatMessage(props: { variant: "left" | "right" ; message?: string; agents: AgentType }) {
   const prettyPrint =
     (SHOW_RAW
       ? props.message
@@ -25,15 +29,25 @@ function ChatMessage(props: { variant: "left" | "right"; message?: string }) {
           .filter((i) => !i.trim().startsWith("_"))
           .join("\n")) || "..."
 
+  
+
+  const meta = getPrefixedObjects(props.message ?? "")
+  
+  const agent = props.agents.find((i) => i.name === meta?.author)
+  console.log(meta, props.message, agent)
+
+  
+  
+//bg-slate-950, bg-slate-200
   return (
     <div className="flex flex-col gap-4">
       {props.variant === "right" && (
-        <div className="inline-flex max-w-[768px] self-end whitespace-pre-wrap rounded-3xl bg-slate-950 px-4 py-3 text-white">
+        <div className={cn(`inline-flex max-w-[768px] self-end whitespace-pre-wrap rounded-3xl px-4 py-3 text-white`, Object.fromEntries(COLORS.map(i=> [i, false] )), agent?.colour)}>
           {prettyPrint}
         </div>
       )}
       {props.variant === "left" && (
-        <div className="inline-flex max-w-[768px] self-start whitespace-pre-wrap rounded-3xl bg-slate-200 px-4 py-3">
+        <div className={cn(`inline-flex max-w-[768px] self-start whitespace-pre-wrap rounded-3xl px-4 py-3`, Object.fromEntries(COLORS.map(i=> [i, false] )), agent?.colour)}>
           {prettyPrint}
         </div>
       )}
@@ -80,6 +94,16 @@ function AgentEditor(props: {
             />
 
             <Input
+              value={agent.colour}
+              disabled={props.disabled}
+              onChange={(e) => {
+                const value = [...props.value]
+                value[index]!.colour = e.target.value
+                props.onChange(value)
+              }}
+            />
+
+            <Input
               value={agent.system.content}
               className="min-h-[128px]"
               disabled={props.disabled}
@@ -112,6 +136,7 @@ function AgentEditor(props: {
             value.push({
               model: "gpt-3.5-turbo",
               name: "",
+              colour:"",
               system: {
                 role: "system",
                 content: "",
@@ -146,6 +171,7 @@ function Chat() {
     {
       model: "gpt-3.5-turbo",
       name: "A",
+      colour: "bg-red-600",
       system: {
         role: "system",
         content: outdent`
@@ -178,6 +204,7 @@ function Chat() {
     {
       model: "gpt-3.5-turbo",
       name: "B",
+      colour: "bg-blue-600",
       system: {
         role: "system",
         content: outdent`
@@ -210,6 +237,7 @@ function Chat() {
     {
       model: "gpt-3.5-turbo",
       name: "C",
+      colour: "bg-green-600",
       system: {
         role: "system",
         content: outdent`
@@ -260,6 +288,7 @@ function Chat() {
               key={index}
               variant={index % 2 === 0 ? "right" : "left"}
               message={msg}
+              agents={agents}
             />
           )
         })}
@@ -268,6 +297,7 @@ function Chat() {
             key="last"
             variant={lastHistory.length % 2 === 0 ? "right" : "left"}
             message={chat.partial}
+            agents={agents}
           />
         )}
       </div>

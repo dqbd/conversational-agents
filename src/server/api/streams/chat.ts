@@ -2,34 +2,11 @@ import { Configuration, OpenAIApi } from "@dqbd/openai"
 import { z } from "zod"
 import { env } from "~/env.mjs"
 import { streamProcedure, toAppendReadableStream } from "~/stream/stream.server"
+import { getPrefixedObjects } from "~/utils/msg"
 import { AgentSchema } from "~/utils/schema"
 
-const schema = z.object({
-  author: z.string(),
-  target: z.string().optional(),
-  final: z.string().optional(),
-})
 
-function getPrefixedObjects(msg: string | undefined) {
-  const segments =
-    msg
-      ?.split("\n")
-      .filter((i) => i.trim().startsWith("_"))
-      .map((i) => i.split(/[=:]/).map((i) => i.trim()))
-      .reduce<Record<string, unknown>>((memo, [key, value]) => {
-        let objKey = key?.startsWith("_") ? key.substring(1) : key!
-        objKey = objKey.toLowerCase()
-        memo[objKey] = value ?? ""
 
-        if (objKey === "target" && value === "_FINAL") {
-          memo["final"] = ""
-        }
-        return memo
-      }, {}) ?? {}
-
-  const parsed = schema.safeParse(segments)
-  return parsed.success ? parsed.data : null
-}
 
 export const chat = streamProcedure
   .input(z.object({ history: z.array(z.string()).min(1), agents: AgentSchema }))
