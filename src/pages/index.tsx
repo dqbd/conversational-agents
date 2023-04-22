@@ -247,6 +247,19 @@ function AgentEditor(props: {
   )
 }
 
+function SummaryView(props: { summary: string | null }) {
+  if (props.summary) {
+    return (
+      <div className="bottom-4 flex-row">
+        <h3 className="text-xl font-bold">Conversation summary</h3>
+        <span>{props.summary}</span>
+      </div>
+    )
+  }
+
+  return null
+}
+
 function Chat(props: { shared: RouterOutputs["history"]["get"] | null }) {
   const chat = streamApi.chat.useMutation({
     onSuccess: (data, variables) => {
@@ -259,6 +272,7 @@ function Chat(props: { shared: RouterOutputs["history"]["get"] | null }) {
   const [lastHistory, setLastHistory] = useState<string[]>(
     props.shared?.history ?? []
   )
+  const [lastSummary, setLastSummary] = useState<string>("")
   const [query, setQuery] = useState("")
   const router = useRouter()
 
@@ -376,6 +390,10 @@ function Chat(props: { shared: RouterOutputs["history"]["get"] | null }) {
 
   async function onSubmit(newHistory: string[], summary: string | null) {
     setLastHistory(newHistory)
+    if (summary) {
+      setLastSummary(summary)
+    }
+
     router.push({ pathname: "/", query: {} }, undefined, { shallow: true })
 
     await chat.mutation.mutateAsync({
@@ -478,6 +496,8 @@ function Chat(props: { shared: RouterOutputs["history"]["get"] | null }) {
           Nasdílet
         </Button>
       </form>
+
+      <SummaryView summary={lastSummary} />
 
       <AgentEditor
         value={agents}

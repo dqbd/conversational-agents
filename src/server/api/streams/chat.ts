@@ -6,10 +6,9 @@ import { streamProcedure, toAppendReadableStream } from "~/stream/stream.server"
 import { getPrefixedObjects } from "~/utils/msg"
 import { AgentSchema } from "~/utils/schema"
 
+const LONG_TERM_HISTORY_LENGTH = 5
+const SHORT_TERM_HISTORY_LENGTH = LONG_TERM_HISTORY_LENGTH + 5
 
-
-
-const SHORT_TERM_HISTORY_LENGTH = 15
 const transformHistory = async (
   previousSummary: string | null,
   history: { role: "user" | "assistant"; content: string }[]
@@ -18,8 +17,8 @@ const transformHistory = async (
     new Configuration({ apiKey: env.OPENAI_API_KEY })
   )
 
-  const shortHistoryItems = history.slice(-SHORT_TERM_HISTORY_LENGTH)
-  const longHistoryItems = history.slice(0, -SHORT_TERM_HISTORY_LENGTH)
+  const shortHistoryItems = history.slice(-LONG_TERM_HISTORY_LENGTH)
+  const longHistoryItems = history.slice(0, -LONG_TERM_HISTORY_LENGTH)
 
   if (longHistoryItems.length === 0) {
     return { summary: null, history: shortHistoryItems }
@@ -123,7 +122,7 @@ export const chat = streamProcedure
           } as const)
         : selectedAgent.system
 
-      if (chatHistory.length > SHORT_TERM_HISTORY_LENGTH + 10) {
+      if (chatHistory.length > SHORT_TERM_HISTORY_LENGTH) {
         console.log("CREATING NEW SUMMARY")
 
         const { summary, history } = await transformHistory(
