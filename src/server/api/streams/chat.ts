@@ -1,9 +1,35 @@
 import { Configuration, OpenAIApi } from "@dqbd/openai"
-import { outdent } from "outdent"
 import { z } from "zod"
 import { env } from "~/env.mjs"
 import { streamProcedure, toAppendReadableStream } from "~/stream/stream.server"
 import { AgentSchema } from "~/utils/schema"
+
+const schema = z.object({
+  author: z.string(),
+  target: z.string().optional(),
+  final: z.string().optional(),
+})
+
+function getPrefixedObjects(msg: string | undefined) {
+  const segments =
+    msg
+      ?.split("\n")
+      .filter((i) => i.trim().startsWith("_"))
+      .map((i) => i.split(/[=:]/).map((i) => i.trim()))
+      .reduce<Record<string, unknown>>((memo, [key, value]) => {
+        let objKey = key?.startsWith("_") ? key.substring(1) : key!
+        objKey = objKey.toLowerCase()
+        memo[objKey] = value ?? ""
+
+        if (objKey === "target" && value === "_FINAL") {
+          memo["final"] = ""
+        }
+        return memo
+      }, {}) ?? {}
+
+  const parsed = schema.safeParse(segments)
+  return parsed.success ? parsed.data : null
+}
 
 export const chat = streamProcedure
   .input(z.object({ history: z.array(z.string()).min(1), agents: AgentSchema }))
@@ -12,21 +38,30 @@ export const chat = streamProcedure
       new Configuration({ apiKey: env.OPENAI_API_KEY })
     )
 
-    const agents = input.agents
-
-    const lastModel =
+    const inactiveAgents = new Set(
       input.history
-        .slice(1)
-        .at(-1)
-        ?.split("<|prompt|>")
-        .at(-1)
-        ?.trim()
-        .replaceAll("(", "")
-        .replaceAll(")", "") ?? "A"
+        .map((i) => getPrefixedObjects(i))
+        .filter((i) => i?.final != null)
+        .map((i) => i?.author)
+        .filter((x): x is string => x != null)
+    )
 
-    const index = ["A", "B", "C", "D"].indexOf(lastModel.toUpperCase())
+    const activeAgents = input.agents.filter(
+      (agent) => !inactiveAgents.has(agent.name)
+    )
 
-    const selectedAgent = agents[index]!
+    const lastMeta = getPrefixedObjects(input.history.at(-1))
+
+    const selectedIndex = Math.max(
+      lastMeta
+        ? activeAgents.findIndex((i) => lastMeta.target?.includes(i.name))
+        : 0,
+      0
+    )
+
+    const selectedAgent = activeAgents[selectedIndex]
+
+    if (selectedAgent == null) return input.history
     const stream = await openai.createChatCompletion({
       model: selectedAgent.model,
       stream: true,

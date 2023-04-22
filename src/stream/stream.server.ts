@@ -29,11 +29,10 @@ class StreamProcedureBuilder<
   ): StreamProcedure<Input, TResponse> {
     return {
       handler: async (req, res) => {
-        console.log(req.body, this.schema?.parse(req.body))
         try {
           const data = await resolver({
             input: this.schema?.parse(req.body),
-            append: (token) => res.write(token),
+            append: (token) => !res.writableEnded && res.write(token),
           })
 
           res.write("[END]")
@@ -73,6 +72,7 @@ class StreamProcedureBuilder<
 export const toAppendReadableStream = async (
   stream: ReadableStream,
   args: {
+    prefix?: string
     append: (data: string) => void
   }
 ) => {
@@ -95,8 +95,12 @@ export const toAppendReadableStream = async (
         }
 
         if (response.choices[0]?.delta?.content != null) {
-          innerResponse += response.choices[0]?.delta?.content
-          args.append(response.choices[0]?.delta?.content)
+          const fragment =
+            (innerResponse.length === 0 ? args.prefix ?? "" : "") +
+            response.choices[0]?.delta?.content
+
+          innerResponse += fragment
+          args.append(fragment)
         }
       }
     })
@@ -120,13 +124,23 @@ export function createStreamHandler<
 
   async function handler(req: NextApiRequest | Request, res?: NextApiResponse) {
     if (req instanceof Request) {
-      const query = new URL(req.url).searchParams.get("stream")
-      return await params.router[query!]?.edgeHandler(req)
+      try {
+        const query = new URL(req.url).searchParams.get("stream")
+        return await params.router[query!]?.edgeHandler(req)
+      } catch (err) {
+        console.log(err)
+        return
+      }
     }
 
     if (res != null) {
-      const query = z.object({ stream: z.string() }).parse(req.query)
-      return await params.router[query.stream]?.handler(req, res)
+      try {
+        const query = z.object({ stream: z.string() }).parse(req.query)
+        return await params.router[query.stream]?.handler(req, res)
+      } catch (err) {
+        console.log(err)
+        return
+      }
     }
 
     throw new Error(

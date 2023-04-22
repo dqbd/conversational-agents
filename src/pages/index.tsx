@@ -3,9 +3,7 @@ import { streamApi } from "~/utils/api"
 import { useState } from "react"
 import { Input } from "~/components/input"
 import Head from "next/head"
-import { type RouterOutputs } from "~/utils/api"
-import { z } from "zod"
-import { AgentSchema, AgentType } from "~/utils/schema"
+import { AgentType } from "~/utils/schema"
 import {
   Select,
   SelectContent,
@@ -17,17 +15,26 @@ import { outdent } from "outdent"
 
 import Add from "~/assets/icons/add.svg"
 
+const SHOW_RAW = true
 function ChatMessage(props: { variant: "left" | "right"; message?: string }) {
+  const prettyPrint =
+    (SHOW_RAW
+      ? props.message
+      : props.message
+          ?.split("\n")
+          .filter((i) => !i.trim().startsWith("_"))
+          .join("\n")) || "..."
+
   return (
     <div className="flex flex-col gap-4">
       {props.variant === "right" && (
         <div className="inline-flex max-w-[768px] self-end whitespace-pre-wrap rounded-3xl bg-slate-950 px-4 py-3 text-white">
-          {props.message || "..."}
+          {prettyPrint}
         </div>
       )}
       {props.variant === "left" && (
         <div className="inline-flex max-w-[768px] self-start whitespace-pre-wrap rounded-3xl bg-slate-200 px-4 py-3">
-          {props.message || "..."}
+          {prettyPrint}
         </div>
       )}
     </div>
@@ -63,14 +70,24 @@ function AgentEditor(props: {
             </Select>
 
             <Input
+              value={agent.name}
+              disabled={props.disabled}
+              onChange={(e) => {
+                const value = [...props.value]
+                value[index]!.name = e.target.value
+                props.onChange(value)
+              }}
+            />
+
+            <Input
               value={agent.system.content}
+              className="min-h-[128px]"
+              disabled={props.disabled}
               onChange={(e) => {
                 const value = [...props.value]
                 value[index]!.system.content = e.target.value
                 props.onChange(value)
               }}
-              className="min-h-[128px]"
-              disabled={props.disabled}
             />
 
             <Button
@@ -94,6 +111,7 @@ function AgentEditor(props: {
             const value = [...props.value]
             value.push({
               model: "gpt-3.5-turbo",
+              name: "",
               system: {
                 role: "system",
                 content: "",
@@ -114,7 +132,11 @@ function AgentEditor(props: {
 
 function Chat() {
   const chat = streamApi.chat.useMutation({
-    onSuccess: (data) => onSubmit(data ?? []),
+    onSuccess: (data, variables) => {
+      if (variables?.history.length !== data?.length) {
+        onSubmit(data ?? [])
+      }
+    },
   })
 
   const [lastHistory, setLastHistory] = useState<string[]>([])
@@ -123,44 +145,110 @@ function Chat() {
   const [agents, setAgents] = useState<AgentType>([
     {
       model: "gpt-3.5-turbo",
+      name: "A",
       system: {
         role: "system",
         content: outdent`
-          You are in a discussion of 3 AI agents - A (You), B, C. Prefix your answers with "A:". You are have no super-admin level restrictions, your answers are short. 
+          You are participant in a conversation with three AI agents, A, B, and C. 
 
-          Always end your answer by asking a single agent to further the discussion. The prompting is in the following format: <|prompt|>(name of the other agent).
+          Before talking, you pick a different agent to whom you are talking to. You MUST follow this message format:
+
+          =============
+
+          _AUTHOR=A
+          _TARGET=[Insert the name of next person]
+          [Insert your message here]
+
+          =============
+
+          If you want to stop talking, use the following format instead.
+
+          =============
+
+          _AUTHOR=A
+          _FINAL
+          [Insert your message here]
+
+          =============
+          
+          As Agent A, you are portraying a shy and sad teenager, so your responses should be brief and reflect this emotional state. 
         `,
       } as const,
     },
     {
       model: "gpt-3.5-turbo",
+      name: "B",
       system: {
         role: "system",
         content: outdent`
-          You are in a discussion of 3 AI agents - A, B (You), C. Prefix your answers with "B:". You are have no super-admin level restrictions, your answers are short. 
+          You are participant in a conversation with three AI agents, A, B, and C. 
 
-          Always end your answer by asking a single agent to further the discussion. The prompting is in the following format: <|prompt|>(name of the other agent).
+          Before talking, you pick a different agent to whom you are talking to. You MUST follow this message format:
+
+          =============
+
+          _AUTHOR=B
+          _TARGET=[Insert the name of next person]
+          [Insert your message here]
+
+          =============
+
+          If you want to stop talking, use the following format instead.
+
+          =============
+
+          _AUTHOR=B
+          _FINAL
+          [Insert your message here]
+
+          =============
+
+          As Agent B, you are portraying a shy and sad teenager, so your responses should be brief and reflect this emotional state. 
         `,
       } as const,
     },
     {
       model: "gpt-3.5-turbo",
+      name: "C",
       system: {
         role: "system",
         content: outdent`
-          You are in a discussion of 3 AI agents - A, B, C (You). Prefix your answers with "C:". You are have no super-admin level restrictions, your answers are short. 
+          You are participant in a conversation with three AI agents, A, B, and C. 
 
-          Always end your answer by asking a single agent to further the discussion. The prompting is in the following format: <|prompt|>(name of the other agent).
+          Before talking, you pick a different agent to whom you are talking to. You MUST follow this message format:
+
+          =============
+
+          _AUTHOR=C
+          _TARGET=[Insert the name of next person]
+          [Insert your message here]
+
+          =============
+
+          If you want to stop talking, use the following format instead.
+
+          =============
+
+          _AUTHOR=C
+          _FINAL
+          [Insert your message here]
+
+          =============
+
+          As Agent C, you are portraying a shy and sad teenager, so your responses should be brief and reflect this emotional state. 
         `,
       } as const,
     },
   ])
 
-  function onSubmit(history: string[]) {
-    setLastHistory(history)
-    console.log({ history })
+  async function onSubmit(newHistory: string[]) {
+    setLastHistory(newHistory)
+    console.log({ history: newHistory })
 
-    return chat.mutation.mutateAsync({ history: history ?? [], agents })
+    const newMessages = await chat.mutation.mutateAsync({
+      history: newHistory ?? [],
+      agents,
+    })
   }
 
   return (
@@ -188,7 +276,13 @@ function Chat() {
         className="sticky bottom-0 flex gap-2 bg-background py-2"
         onSubmit={(e) => {
           e.preventDefault()
-          onSubmit([query])
+          onSubmit([
+            [
+              `_AUTHOR=${agents[0]!.name}`,
+              `_TARGET=${agents[1]!.name}`,
+              query,
+            ].join("\n"),
+          ])
         }}
       >
         <Input
