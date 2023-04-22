@@ -20,28 +20,8 @@ import { cn } from "~/utils/cn"
 
 import { createTRPCContext } from "~/server/api/trpc"
 import { appRouter } from "~/server/api/root"
-import {
-  InferGetServerSidePropsType,
-  NextApiRequest,
-  NextApiResponse,
-} from "next"
+import { NextApiRequest, NextApiResponse } from "next"
 import { useRouter } from "next/router"
-
-const COLORS = [
-  "bg-red-600",
-  "bg-blue-600",
-  "bg-green-600",
-  "bg-yellow-600",
-  "bg-purple-600",
-  "bg-pink-600",
-  "bg-indigo-600",
-  "bg-teal-600",
-  "bg-orange-600",
-  "bg-gray-600",
-  "bg-slate-600",
-  "bg-slate-200",
-  "bg-slate-950",
-]
 
 const SHOW_RAW = true
 function ChatMessage(props: {
@@ -66,7 +46,6 @@ function ChatMessage(props: {
       <span
         className={cn(
           "max-w-[768px] whitespace-pre-wrap rounded-3xl px-4 py-3 text-white",
-          Object.fromEntries(COLORS.map((i) => [i, false])),
           agent?.colour
         )}
       >
@@ -145,29 +124,34 @@ function AgentEditor(props: {
 
             {agent.avatar && <img src={agent.avatar ?? ""} alt={agent.name} />}
 
-            <Input
-              value={agent.avatar}
-              placeholder="Avatar"
-              disabled={props.disabled}
-              onChange={(e) => {
-                const value = [...props.value]
-                value[index]!.avatar = e.target.value
-                props.onChange(value)
-              }}
-            />
-
-            <Button
-              type="button"
-              onClick={() => {
-                avatars.mutateAsync(agent.name).then((url) => {
+            <div className="flex flex-row gap-2">
+              <Input
+                value={agent.avatar}
+                placeholder="Avatar"
+                className="flex-grow"
+                disabled={props.disabled}
+                onChange={(e) => {
                   const value = [...props.value]
-                  value[index]!.avatar = url
+                  value[index]!.avatar = e.target.value
                   props.onChange(value)
-                })
-              }}
-            >
-              Generate avatar
-            </Button>
+                }}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-shrink-0"
+                onClick={() => {
+                  avatars.mutateAsync(agent.name).then((url) => {
+                    const value = [...props.value]
+                    value[index]!.avatar = url
+                    props.onChange(value)
+                  })
+                }}
+              >
+                Generate
+              </Button>
+            </div>
 
             <Input
               value={agent.name}
