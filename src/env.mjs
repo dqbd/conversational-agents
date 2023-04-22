@@ -18,6 +18,7 @@ const server = z.object({
  * built with invalid env vars. To expose them to the client, prefix them with `NEXT_PUBLIC_`.
  */
 const client = z.object({
+  NEXT_PUBLIC_D_ID_API_KEY: z.string().min(1),
   // NEXT_PUBLIC_CLIENTVAR: z.string().min(1),
 })
 
@@ -34,6 +35,7 @@ const processEnv = {
   REPLICATE_API_KEY: process.env.REPLICATE_API_KEY,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_API_KEY: process.env.SUPABASE_API_KEY,
+  NEXT_PUBLIC_D_ID_API_KEY: process.env.NEXT_PUBLIC_D_ID_API_KEY,
   // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
 }
 
