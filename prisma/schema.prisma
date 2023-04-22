@@ -26,6 +26,12 @@ model Slack {
     json String
 }
 
+model Avatar {
+    id String @id @default(cuid())
+    name String
+    filename String
+}
+
 model Profile {
     id      String @id @default(cuid())
     name    String

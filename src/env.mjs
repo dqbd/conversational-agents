@@ -8,6 +8,9 @@ const server = z.object({
   DATABASE_URL: z.string().url(),
   OPENAI_API_KEY: z.string().min(1),
   NODE_ENV: z.enum(["development", "test", "production"]),
+  REPLICATE_API_KEY: z.string().min(1),
+  SUPABASE_URL: z.string().min(1),
+  SUPABASE_API_KEY: z.string().min(1),
 })
 
 /**
@@ -28,6 +31,9 @@ const processEnv = {
   DATABASE_URL: process.env.DATABASE_URL,
   NODE_ENV: process.env.NODE_ENV,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  REPLICATE_API_KEY: process.env.REPLICATE_API_KEY,
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_API_KEY: process.env.SUPABASE_API_KEY,
   // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
 }
 

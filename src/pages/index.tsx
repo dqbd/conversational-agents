@@ -27,10 +27,28 @@ import {
 } from "next"
 import { useRouter } from "next/router"
 
-const COLORS = ["bg-red-600", "bg-blue-600", "bg-green-600", "bg-yellow-600", "bg-purple-600", "bg-pink-600", "bg-indigo-600", "bg-teal-600", "bg-orange-600", "bg-gray-600", "bg-slate-600", "bg-slate-200", "bg-slate-950"]
+const COLORS = [
+  "bg-red-600",
+  "bg-blue-600",
+  "bg-green-600",
+  "bg-yellow-600",
+  "bg-purple-600",
+  "bg-pink-600",
+  "bg-indigo-600",
+  "bg-teal-600",
+  "bg-orange-600",
+  "bg-gray-600",
+  "bg-slate-600",
+  "bg-slate-200",
+  "bg-slate-950",
+]
 
 const SHOW_RAW = true
-function ChatMessage(props: { variant: "left" | "right" ; message?: string; agents: AgentType }) {
+function ChatMessage(props: {
+  variant: "left" | "right"
+  message?: string
+  agents: AgentType
+}) {
   const prettyPrint =
     (SHOW_RAW
       ? props.message
@@ -39,24 +57,56 @@ function ChatMessage(props: { variant: "left" | "right" ; message?: string; agen
           .filter((i) => !i.trim().startsWith("_"))
           .join("\n")) || "..."
 
-  
-
   const meta = getPrefixedObjects(props.message ?? "")
-  
-  const agent = props.agents.find((i) => i.name === meta?.author)
-  console.log(meta, props.message, agent)
 
-  
+  const agent = props.agents.find((i) => i.name === meta?.author)
+
+  const content = (
+    <>
+      <span
+        className={cn(
+          "max-w-[768px] whitespace-pre-wrap rounded-3xl px-4 py-3 text-white",
+          Object.fromEntries(COLORS.map((i) => [i, false])),
+          agent?.colour
+        )}
+      >
+        {prettyPrint}
+      </span>
+      {agent?.avatar ? (
+        <img
+          src={agent?.avatar ?? ""}
+          alt={agent?.name}
+          className="h-12 w-12 rounded-full"
+        />
+      ) : (
+        <div
+          className={cn(
+            "flex h-12 w-12 items-center justify-center rounded-full text-center",
+            agent?.colour
+          )}
+        >
+          <span className="text-2xl font-bold text-white">
+            {agent?.name?.[0]?.toUpperCase()}
+          </span>
+        </div>
+      )}
+    </>
+  )
+
   return (
     <div className="flex flex-col gap-4">
       {props.variant === "right" && (
-        <div className={cn(`inline-flex max-w-[768px] self-end whitespace-pre-wrap rounded-3xl px-4 py-3 text-white`, Object.fromEntries(COLORS.map(i=> [i, false] )), agent?.colour)}>
-          {prettyPrint}
+        <div className={cn(`inline-flex max-w-[768px] gap-2 self-end`)}>
+          {content}
         </div>
       )}
       {props.variant === "left" && (
-        <div className={cn(`inline-flex max-w-[768px] self-start whitespace-pre-wrap rounded-3xl px-4 py-3`, Object.fromEntries(COLORS.map(i=> [i, false] )), agent?.colour)}>
-          {prettyPrint}
+        <div
+          className={cn(
+            `inline-flex max-w-[768px] flex-row-reverse gap-2 self-start`
+          )}
+        >
+          {content}
         </div>
       )}
     </div>
@@ -68,6 +118,8 @@ function AgentEditor(props: {
   onChange: (value: AgentType) => void
   disabled?: boolean
 }) {
+  const avatars = api.history.generateAvatar.useMutation({})
+
   return (
     <div className="grid grid-cols-2 gap-4">
       {props.value.map((agent, index) => {
@@ -91,8 +143,35 @@ function AgentEditor(props: {
               </SelectContent>
             </Select>
 
+            {agent.avatar && <img src={agent.avatar ?? ""} alt={agent.name} />}
+
+            <Input
+              value={agent.avatar}
+              placeholder="Avatar"
+              disabled={props.disabled}
+              onChange={(e) => {
+                const value = [...props.value]
+                value[index]!.avatar = e.target.value
+                props.onChange(value)
+              }}
+            />
+
+            <Button
+              type="button"
+              onClick={() => {
+                avatars.mutateAsync(agent.name).then((url) => {
+                  const value = [...props.value]
+                  value[index]!.avatar = url
+                  props.onChange(value)
+                })
+              }}
+            >
+              Generate avatar
+            </Button>
+
             <Input
               value={agent.name}
+              placeholder="Jméno"
               disabled={props.disabled}
               onChange={(e) => {
                 const value = [...props.value]
@@ -103,6 +182,7 @@ function AgentEditor(props: {
 
             <Input
               value={agent.colour}
+              placeholder="Barva"
               disabled={props.disabled}
               onChange={(e) => {
                 const value = [...props.value]
@@ -144,7 +224,7 @@ function AgentEditor(props: {
             value.push({
               model: "gpt-3.5-turbo",
               name: "",
-              colour:"",
+              colour: "",
               system: {
                 role: "system",
                 content: "",

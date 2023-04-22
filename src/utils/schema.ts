@@ -5,6 +5,7 @@ export const AgentSchema = z.array(
     model: z.string(),
     name: z.string(),
     colour: z.string(),
+    avatar: z.string().optional(),
     system: z.object({
       role: z.literal("system"),
       content: z.string(),
