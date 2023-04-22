@@ -1,6 +1,6 @@
 import { Button } from "~/components/button"
 import { RouterOutputs, api, streamApi } from "~/utils/api"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Input } from "~/components/input"
 import Head from "next/head"
 import { AgentType } from "~/utils/schema"
@@ -22,6 +22,13 @@ import { createTRPCContext } from "~/server/api/trpc"
 import { appRouter } from "~/server/api/root"
 import { NextApiRequest, NextApiResponse } from "next"
 import { useRouter } from "next/router"
+import { useMutation } from "@tanstack/react-query"
+import hark from "hark"
+
+const DID_API = {
+  key: "[DID_API_KEY]",
+  url: "https://api.d-id.com",
+} as const
 
 const SHOW_RAW = true
 function ChatMessage(props: {
@@ -508,9 +515,191 @@ function Chat(props: { shared: RouterOutputs["history"]["get"] | null }) {
   )
 }
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function Video() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const initRef = useRef<boolean>(false)
+
+  const promiseRef = useRef<Promise<unknown>>(Promise.resolve())
+  const sessionRef = useRef<{ streamId: string; sessionId: string } | null>(
+    null
+  )
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
+
+  const disconnect = useMutation(async () => {
+    const video = videoRef.current
+    if (!video) return
+
+    if (video.srcObject && video.srcObject instanceof MediaStream) {
+      video.srcObject.getTracks().forEach((track) => track.stop())
+      video.srcObject = null
+    }
+  })
+
+  const sendData = useMutation(async () => {
+    if (sessionRef.current == null) return
+    console.log({ sessionRef })
+
+    const talkResponse = await fetch(
+      `${DID_API.url}/talks/streams/${sessionRef.current.streamId}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${DID_API.key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          script: {
+            type: "text",
+            provider: {
+              type: "microsoft",
+              voice_id: "Guy",
+            },
+            ssml: "false",
+            input:
+              "Hi, my name is Lukas. Im new GPT agent that might destroy this world.",
+          },
+
+          config: {
+            fluent: "false",
+            pad_audio: "0.0",
+          },
+          session_id: sessionRef.current.sessionId,
+        }),
+      }
+    )
+
+    console.log(talkResponse)
+  })
+
+  const connect = useMutation(async () => {
+    if (initRef.current) return
+    initRef.current = true
+
+    const sessionResponse = await fetch(`${DID_API.url}/talks/streams`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${DID_API.key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        source_url: "https://d-id-public-bucket.s3.amazonaws.com/or-roman.jpg",
+      }),
+    })
+
+    const {
+      id: streamId,
+      session_id: sessionId,
+      offer,
+      ice_servers: iceServers,
+    } = await sessionResponse.json()
+
+    const peerConnection = new RTCPeerConnection({ iceServers })
+    peerConnection.addEventListener(
+      "icecandidate",
+      (event) => {
+        if (event.candidate) {
+          const { candidate, sdpMid, sdpMLineIndex } = event.candidate
+          promiseRef.current = promiseRef.current.then(async () => {
+            await wait(1500)
+
+            return fetch(`${DID_API.url}/talks/streams/${streamId}/ice`, {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${DID_API.key}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                candidate,
+                sdpMid,
+                sdpMLineIndex,
+                session_id: sessionId,
+              }),
+            })
+          })
+        }
+      },
+      true
+    )
+
+    peerConnection.addEventListener(
+      "iceconnectionstatechange",
+      () => {
+        if (peerConnection.iceConnectionState === "connected") {
+          sessionRef.current = { streamId, sessionId }
+        }
+      },
+      true
+    )
+
+    peerConnection.addEventListener(
+      "track",
+      (event) => {
+        const video = videoRef.current
+        if (!video) return
+
+        const stream = event.streams[0]!
+
+        video.srcObject = stream
+
+        const speechEvents = hark(stream)
+
+        speechEvents.on("speaking", () => {
+          console.log("is speaking")
+        })
+
+        speechEvents.on("state_change", (e) => {
+          console.log(e)
+        })
+
+        speechEvents.on("stopped_speaking", () => {
+          console.log("stopped speaking")
+        })
+      },
+      true
+    )
+
+    peerConnectionRef.current = peerConnection
+
+    await peerConnectionRef.current.setRemoteDescription(offer)
+    const sessionClientAnswer = await peerConnection.createAnswer()
+    await peerConnection.setLocalDescription(sessionClientAnswer)
+
+    await fetch(`${DID_API.url}/talks/streams/${streamId}/sdp`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${DID_API.key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        answer: sessionClientAnswer,
+        session_id: sessionId,
+      }),
+    })
+  })
+
+  useEffect(() => {
+    if (connect.isIdle) {
+      connect.mutate()
+    }
+  }, [])
+
+  return (
+    <>
+      <div className="relative">
+
+      </div>
+      <video autoPlay width={400} height={400} ref={videoRef} />
+      <Button onClick={() => sendData.mutateAsync()}>Start</Button>
+    </>
+  )
+}
+
 export default function Page(props: {
   shared: RouterOutputs["history"]["get"]
 }) {
+  const [start, setState] = useState(false)
   return (
     <>
       <Head>
@@ -518,6 +707,21 @@ export default function Page(props: {
       </Head>
       <div className="mx-auto flex max-w-[1280px] flex-col gap-6 p-4">
         <div className="flex flex-col items-center">
+          <Button
+            onClick={() => {
+              setState(true)
+            }}
+          >
+            Start
+          </Button>
+
+          {start && (
+            <>
+              <Video />
+              <Video />
+              <Video />
+            </>
+          )}
           <Chat shared={props.shared} />
         </div>
       </div>
