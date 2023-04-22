@@ -92,13 +92,42 @@ function ChatMessage(props: {
   )
 }
 
+function AgentFieldGenerate(props: {
+  disabled?: boolean
+  onSuccess: (value: string) => void
+}) {
+  const [prompt, setPrompt] = useState("")
+  const avatars = api.history.generateAvatar.useMutation({
+    onSuccess: props.onSuccess,
+  })
+
+  return (
+    <div className="flex flex-row gap-2">
+      <Input
+        value={prompt}
+        placeholder="Avatar Prompt"
+        disabled={props.disabled}
+        onChange={(e) => setPrompt(e.target.value)}
+      />
+
+      <Button
+        type="button"
+        variant="outline"
+        className="flex-shrink-0"
+        disabled={props.disabled || avatars.isLoading}
+        onClick={() => avatars.mutateAsync(prompt)}
+      >
+        Generate
+      </Button>
+    </div>
+  )
+}
+
 function AgentEditor(props: {
   value: AgentType
   onChange: (value: AgentType) => void
   disabled?: boolean
 }) {
-  const avatars = api.history.generateAvatar.useMutation({})
-
   return (
     <div className="grid grid-cols-2 gap-4">
       {props.value.map((agent, index) => {
@@ -124,34 +153,25 @@ function AgentEditor(props: {
 
             {agent.avatar && <img src={agent.avatar ?? ""} alt={agent.name} />}
 
-            <div className="flex flex-row gap-2">
-              <Input
-                value={agent.avatar}
-                placeholder="Avatar"
-                className="flex-grow"
-                disabled={props.disabled}
-                onChange={(e) => {
-                  const value = [...props.value]
-                  value[index]!.avatar = e.target.value
-                  props.onChange(value)
-                }}
-              />
+            <Input
+              value={agent.avatar}
+              placeholder="Avatar"
+              className="flex-grow"
+              disabled={props.disabled}
+              onChange={(e) => {
+                const value = [...props.value]
+                value[index]!.avatar = e.target.value
+                props.onChange(value)
+              }}
+            />
 
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-shrink-0"
-                onClick={() => {
-                  avatars.mutateAsync(agent.name).then((url) => {
-                    const value = [...props.value]
-                    value[index]!.avatar = url
-                    props.onChange(value)
-                  })
-                }}
-              >
-                Generate
-              </Button>
-            </div>
+            <AgentFieldGenerate
+              onSuccess={(newUrl) => {
+                const value = [...props.value]
+                value[index]!.avatar = newUrl
+                props.onChange(value)
+              }}
+            />
 
             <Input
               value={agent.name}
