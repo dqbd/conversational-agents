@@ -6,8 +6,8 @@ import { streamProcedure, toAppendReadableStream } from "~/stream/stream.server"
 import { getPrefixedObjects } from "~/utils/msg"
 import { AgentSchema } from "~/utils/schema"
 
-const LONG_TERM_HISTORY_LENGTH = 5
-const SHORT_TERM_HISTORY_LENGTH = LONG_TERM_HISTORY_LENGTH + 5
+const LONG_TERM_HISTORY_LENGTH = 15
+const SHORT_TERM_HISTORY_LENGTH = LONG_TERM_HISTORY_LENGTH + 10
 
 const transformHistory = async (
   previousSummary: string | null,
