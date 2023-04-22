@@ -1,5 +1,5 @@
 import { Button } from "~/components/button"
-import { streamApi } from "~/utils/api"
+import { RouterOutputs, api, streamApi } from "~/utils/api"
 import { useState } from "react"
 import { Input } from "~/components/input"
 import Head from "next/head"
@@ -14,6 +14,14 @@ import { SelectItem } from "~/components/select"
 import { outdent } from "outdent"
 
 import Add from "~/assets/icons/add.svg"
+import { createTRPCContext } from "~/server/api/trpc"
+import { appRouter } from "~/server/api/root"
+import {
+  InferGetServerSidePropsType,
+  NextApiRequest,
+  NextApiResponse,
+} from "next"
+import { useRouter } from "next/router"
 
 const SHOW_RAW = true
 function ChatMessage(props: { variant: "left" | "right"; message?: string }) {
@@ -130,7 +138,7 @@ function AgentEditor(props: {
   )
 }
 
-function Chat() {
+function Chat(props: { serverHistory: string[] | null | undefined }) {
   const chat = streamApi.chat.useMutation({
     onSuccess: (data, variables) => {
       if (variables?.history.length !== data?.length) {
@@ -139,8 +147,19 @@ function Chat() {
     },
   })
 
-  const [lastHistory, setLastHistory] = useState<string[]>([])
+  const [lastHistory, setLastHistory] = useState<string[]>(
+    props.serverHistory ?? []
+  )
   const [query, setQuery] = useState("")
+  const router = useRouter()
+
+  const save = api.history.save.useMutation({
+    onSuccess: (item) => {
+      router.push({ pathname: "/", query: { id: item.id } }, undefined, {
+        shallow: true,
+      })
+    },
+  })
 
   const [agents, setAgents] = useState<AgentType>([
     {
@@ -243,9 +262,9 @@ function Chat() {
 
   async function onSubmit(newHistory: string[]) {
     setLastHistory(newHistory)
-    console.log({ history: newHistory })
+    router.push({ pathname: "/", query: {} }, undefined, { shallow: true })
 
-    const newMessages = await chat.mutation.mutateAsync({
+    await chat.mutation.mutateAsync({
       history: newHistory ?? [],
       agents,
     })
@@ -315,6 +334,9 @@ function Chat() {
                 className="flex-shrink-0 rounded-3xl"
                 onClick={() => {
                   setLastHistory([])
+                  router.push({ pathname: "/", query: {} }, undefined, {
+                    shallow: true,
+                  })
                   chat.mutation.reset()
                 }}
               >
@@ -323,6 +345,18 @@ function Chat() {
             )}
           </>
         )}
+
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-shrink-0 rounded-3xl"
+          disabled={!lastHistory.length || save.isLoading}
+          onClick={() => {
+            save.mutateAsync({ history: lastHistory })
+          }}
+        >
+          Nasdílet
+        </Button>
       </form>
 
       <AgentEditor
@@ -334,7 +368,9 @@ function Chat() {
   )
 }
 
-export default function Page() {
+export default function Page(props: {
+  history: RouterOutputs["history"]["get"]
+}) {
   return (
     <>
       <Head>
@@ -342,9 +378,25 @@ export default function Page() {
       </Head>
       <div className="mx-auto flex max-w-[1280px] flex-col gap-6 p-4">
         <div className="flex flex-col items-center">
-          <Chat />
+          <Chat serverHistory={props.history} />
         </div>
       </div>
     </>
   )
+}
+
+export const getServerSideProps = async (
+  req: NextApiRequest,
+  res: NextApiResponse
+) => {
+  const ctx = await createTRPCContext({ req, res })
+  const caller = appRouter.createCaller(ctx)
+
+  if (req.query.id == null) {
+    return { props: { history: [] } }
+  }
+
+  const history = await caller.history.get({ id: req.query.id as string })
+
+  return { props: { history } }
 }

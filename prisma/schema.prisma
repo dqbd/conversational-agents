@@ -6,8 +6,13 @@ generator client {
 }
 
 datasource db {
-    provider = "sqlite"
+    provider = "postgres"
     url      = env("DATABASE_URL")
+}
+
+model History {
+    id          String @id @default(cuid())
+    historyJson String
 }
 
 model Example {
