@@ -7,6 +7,7 @@ import { OpenAIApi, Configuration } from "@dqbd/openai"
 import path from "path"
 import { env } from "~/env.mjs"
 import { v4 as uuid } from "uuid"
+import { AgentSchema } from "~/utils/schema"
 
 export const history = createTRPCRouter({
   generateAvatar: publicProcedure
@@ -53,16 +54,22 @@ export const history = createTRPCRouter({
       const item = await ctx.prisma.history.findFirst({
         where: { id: input.id },
       })
-      return z
-        .array(z.string())
-        .nullish()
-        .parse(JSON.parse(item?.historyJson ?? ""))
+      return {
+        history: z
+          .array(z.string())
+          .nullish()
+          .parse(JSON.parse(item?.historyJson ?? "")),
+        agents: AgentSchema.nullish().parse(JSON.parse(item?.agentsJson ?? "")),
+      }
     }),
   save: publicProcedure
-    .input(z.object({ history: z.array(z.string()) }))
+    .input(z.object({ history: z.array(z.string()), agents: AgentSchema }))
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.history.create({
-        data: { historyJson: JSON.stringify(input.history) },
+        data: {
+          historyJson: JSON.stringify(input.history),
+          agentsJson: JSON.stringify(input.agents),
+        },
       })
     }),
 })

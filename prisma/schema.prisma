@@ -13,6 +13,7 @@ datasource db {
 model History {
     id          String @id @default(cuid())
     historyJson String
+    agentsJson  String?
 }
 
 model Example {
@@ -27,8 +28,8 @@ model Slack {
 }
 
 model Avatar {
-    id String @id @default(cuid())
-    name String
+    id       String @id @default(cuid())
+    name     String
     filename String
 }
 

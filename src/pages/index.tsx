@@ -227,7 +227,7 @@ function AgentEditor(props: {
   )
 }
 
-function Chat(props: { serverHistory: string[] | null | undefined }) {
+function Chat(props: { shared: RouterOutputs["history"]["get"] | null }) {
   const chat = streamApi.chat.useMutation({
     onSuccess: (data, variables) => {
       if (variables?.history.length !== data?.history.length) {
@@ -237,7 +237,7 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
   })
 
   const [lastHistory, setLastHistory] = useState<string[]>(
-    props.serverHistory ?? []
+    props.shared?.history ?? []
   )
   const [query, setQuery] = useState("")
   const router = useRouter()
@@ -250,14 +250,15 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
     },
   })
 
-  const [agents, setAgents] = useState<AgentType>([
-    {
-      model: "gpt-3.5-turbo",
-      name: "A",
-      colour: "bg-red-600",
-      system: {
-        role: "system",
-        content: outdent`
+  const [agents, setAgents] = useState<AgentType>(
+    props.shared?.agents ?? [
+      {
+        model: "gpt-3.5-turbo",
+        name: "A",
+        colour: "bg-red-600",
+        system: {
+          role: "system",
+          content: outdent`
           You are participant in a conversation with three AI agents, A, B, and C. 
 
           Before talking, you pick a different agent to whom you are talking to. You MUST follow this message format:
@@ -282,15 +283,15 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
           
           As Agent A, you are portraying a shy and sad teenager, so your responses should be brief and reflect this emotional state. 
         `,
-      } as const,
-    },
-    {
-      model: "gpt-3.5-turbo",
-      name: "B",
-      colour: "bg-blue-600",
-      system: {
-        role: "system",
-        content: outdent`
+        } as const,
+      },
+      {
+        model: "gpt-3.5-turbo",
+        name: "B",
+        colour: "bg-blue-600",
+        system: {
+          role: "system",
+          content: outdent`
           You are participant in a conversation with three AI agents, A, B, and C. 
 
           Before talking, you pick a different agent to whom you are talking to. You MUST follow this message format:
@@ -315,15 +316,15 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
 
           As Agent B, you are portraying a shy and sad teenager, so your responses should be brief and reflect this emotional state. 
         `,
-      } as const,
-    },
-    {
-      model: "gpt-3.5-turbo",
-      name: "C",
-      colour: "bg-green-600",
-      system: {
-        role: "system",
-        content: outdent`
+        } as const,
+      },
+      {
+        model: "gpt-3.5-turbo",
+        name: "C",
+        colour: "bg-green-600",
+        system: {
+          role: "system",
+          content: outdent`
           You are participant in a conversation with three AI agents, A, B, and C. 
 
           Before talking, you pick a different agent to whom you are talking to. You MUST follow this message format:
@@ -348,9 +349,10 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
 
           As Agent C, you are portraying a shy and sad teenager, so your responses should be brief and reflect this emotional state. 
         `,
-      } as const,
-    },
-  ])
+        } as const,
+      },
+    ]
+  )
 
   async function onSubmit(newHistory: string[], summary: string | null) {
     setLastHistory(newHistory)
@@ -450,7 +452,7 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
           className="flex-shrink-0 rounded-3xl"
           disabled={!lastHistory.length || save.isLoading}
           onClick={() => {
-            save.mutateAsync({ history: lastHistory })
+            save.mutateAsync({ history: lastHistory, agents })
           }}
         >
           Nasdílet
@@ -467,7 +469,7 @@ function Chat(props: { serverHistory: string[] | null | undefined }) {
 }
 
 export default function Page(props: {
-  history: RouterOutputs["history"]["get"]
+  shared: RouterOutputs["history"]["get"]
 }) {
   return (
     <>
@@ -476,7 +478,7 @@ export default function Page(props: {
       </Head>
       <div className="mx-auto flex max-w-[1280px] flex-col gap-6 p-4">
         <div className="flex flex-col items-center">
-          <Chat serverHistory={props.history} />
+          <Chat shared={props.shared} />
         </div>
       </div>
     </>
@@ -491,10 +493,9 @@ export const getServerSideProps = async (
   const caller = appRouter.createCaller(ctx)
 
   if (req.query.id == null) {
-    return { props: { history: [] } }
+    return { props: { shared: null } }
   }
 
-  const history = await caller.history.get({ id: req.query.id as string })
-
-  return { props: { history } }
+  const shared = await caller.history.get({ id: req.query.id as string })
+  return { props: { shared } }
 }
