@@ -23,6 +23,7 @@ RUN \
 
 FROM --platform=linux/amd64 node:16-alpine3.17 AS builder
 ARG DATABASE_URL
+ARG NEXT_PUBLIC_D_ID_API_KEY
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -43,6 +44,7 @@ RUN apk add --no-cache pandoc libc6-compat openssl
 WORKDIR /app
 
 ENV NODE_ENV production
+ARG NEXT_PUBLIC_D_ID_API_KEY
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

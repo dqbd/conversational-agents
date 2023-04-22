@@ -14,7 +14,9 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 export function Video(props: {
   name: string
   avatar: string
-  onReady: (mutate: (value: string) => Promise<void>) => void
+  onReady: (
+    mutate: (args: { voice: string; message: string }) => Promise<void>
+  ) => void
 }) {
   const initRef = useRef<boolean>(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -28,55 +30,57 @@ export function Video(props: {
 
   const eventRef = useRef<ReturnType<typeof hark> | null>(null)
 
-  const sendData = useMutation(async (message: string) => {
-    if (sessionRef.current == null) return
-    console.log({ sessionRef })
+  const sendData = useMutation(
+    async (args: { voice: string; message: string }) => {
+      if (sessionRef.current == null) return
+      console.log({ sessionRef })
 
-    const talkResponse = await fetch(
-      `${DID_API.url}/talks/streams/${sessionRef.current.streamId}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${DID_API.key}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          script: {
-            type: "text",
-            provider: {
-              type: "microsoft",
-              voice_id: "Guy",
-            },
-            ssml: "false",
-            input: message,
+      const talkResponse = await fetch(
+        `${DID_API.url}/talks/streams/${sessionRef.current.streamId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${DID_API.key}`,
+            "Content-Type": "application/json",
           },
-          config: { fluent: "false", pad_audio: "0.0" },
-          session_id: sessionRef.current.sessionId,
-        }),
-      }
-    )
-
-    const payload: { duration: number } = await talkResponse.json()
-
-    await new Promise<void>((resolve) => {
-      let firstSpeaking = true
-      let timeout: number = 0
-
-      eventRef.current?.on("speaking", () => {
-        if (firstSpeaking) {
-          console.log("is speaking")
-
-          timeout = window.setTimeout(() => {
-            console.log("is not speaking")
-            resolve()
-          }, Math.max(0, payload.duration - 5) * 1050)
+          body: JSON.stringify({
+            script: {
+              type: "text",
+              provider: {
+                type: "microsoft",
+                voice_id: args.voice,
+              },
+              ssml: "false",
+              input: args.message,
+            },
+            config: { fluent: "false", pad_audio: "0.0" },
+            session_id: sessionRef.current.sessionId,
+          }),
         }
-        firstSpeaking = false
-      })
-    })
+      )
 
-    console.log("yielding back to LLM")
-  })
+      const payload: { duration: number } = await talkResponse.json()
+
+      await new Promise<void>((resolve) => {
+        let firstSpeaking = true
+        let timeout: number = 0
+
+        eventRef.current?.on("speaking", () => {
+          if (firstSpeaking) {
+            console.log("is speaking")
+
+            timeout = window.setTimeout(() => {
+              console.log("is not speaking")
+              resolve()
+            }, Math.max(0, payload.duration - 15) * 1050)
+          }
+          firstSpeaking = false
+        })
+      })
+
+      console.log("yielding back to LLM")
+    }
+  )
 
   const connect = useMutation(async () => {
     const sessionResponse = await fetch(`${DID_API.url}/talks/streams`, {

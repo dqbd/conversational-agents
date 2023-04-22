@@ -1,5 +1,5 @@
 import { AgentType } from "~/utils/schema"
-import { getPrefixedObjects } from "~/utils/msg"
+import { getPrefixedObjects, getTextContent } from "~/utils/msg"
 import { cn } from "~/utils/cn"
 
 const SHOW_RAW = true
@@ -10,12 +10,7 @@ export function ChatMessage(props: {
   agents: AgentType
 }) {
   const prettyPrint =
-    (SHOW_RAW
-      ? props.message
-      : props.message
-          ?.split("\n")
-          .filter((i) => !i.trim().startsWith("_"))
-          .join("\n")) || "..."
+    (SHOW_RAW ? props.message : getTextContent(props.message)) || "..."
 
   const meta = getPrefixedObjects(props.message ?? "")
 
@@ -26,7 +21,7 @@ export function ChatMessage(props: {
       <span
         className={cn(
           "max-w-[768px] whitespace-pre-wrap rounded-3xl px-4 py-3 text-white",
-          agent?.colour
+          agent?.colour ?? "bg-slate-500"
         )}
       >
         {prettyPrint}
@@ -41,7 +36,7 @@ export function ChatMessage(props: {
         <div
           className={cn(
             "flex h-12 w-12 items-center justify-center rounded-full text-center",
-            agent?.colour
+            agent?.colour ?? "bg-slate-500"
           )}
         >
           <span className="text-2xl font-bold text-white">
