@@ -39,7 +39,7 @@ export const history = createTRPCRouter({
 
       const { data, error } = await supabase.storage
         .from("avatars")
-        .upload(filename, arrayBuffer, { upsert: true })
+        .upload(filename, arrayBuffer, { upsert: false })
 
       if (error) throw error
 
