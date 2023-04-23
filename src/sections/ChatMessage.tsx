@@ -2,15 +2,14 @@ import { AgentType } from "~/utils/schema"
 import { getPrefixedObjects, getTextContent } from "~/utils/msg"
 import { cn } from "~/utils/cn"
 
-const SHOW_RAW = true
-
 export function ChatMessage(props: {
   variant: "left" | "right"
   message?: string
   agents: AgentType
+  debug?: boolean
 }) {
   const prettyPrint =
-    (SHOW_RAW ? props.message : getTextContent(props.message)) || "..."
+    (props.debug ? props.message : getTextContent(props.message)) || "..."
 
   const meta = getPrefixedObjects(props.message ?? "")
 

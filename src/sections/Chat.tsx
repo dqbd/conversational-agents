@@ -107,6 +107,8 @@ export function Chat(props: {
 
   const [videoMode, setVideoMode] = useState(false)
   const [demoMode, setDemoMode] = useState(false)
+  const [debugMode, setDebugMode] = useState(true)
+
   const videoSendRef = useRef<
     Record<string, (args: { voice: string; message: string }) => void>
   >({})
@@ -171,6 +173,7 @@ export function Chat(props: {
                 variant={index % 2 === 0 ? "right" : "left"}
                 message={msg}
                 agents={agents}
+                debug={debugMode}
               />
             )
           })}
@@ -180,6 +183,7 @@ export function Chat(props: {
               variant={lastHistory.length % 2 === 0 ? "right" : "left"}
               message={chat.partial}
               agents={agents}
+              debug={debugMode}
             />
           )}
         </div>
@@ -276,6 +280,15 @@ export function Chat(props: {
               onCheckedChange={() => setDemoMode((value) => !value)}
             />
             <Label htmlFor="demo">Continuous Mode</Label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Switch
+              id="debug"
+              checked={debugMode}
+              onCheckedChange={() => setDebugMode((value) => !value)}
+            />
+            <Label htmlFor="debug">Debug Mode</Label>
           </div>
         </div>
 
